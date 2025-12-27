@@ -542,36 +542,6 @@ In a real deployment, complement with:
 
 ---
 
-## 🐛 Troubleshooting
-
-### Common Issues
-
-| Problem | Solution |
-|---------|----------|
-| **Orders not loading** | Check browser console for errors; refresh page |
-| **Map not displaying** | Ensure MapLibre GL CSS is imported |
-| **Real-time updates stopped** | Toggle "Live Updates" off and on |
-| **Ops user sees no orders** | Verify selected region has orders (Northeast, South, etc.) |
-
-### Development Tips
-- Use React DevTools for component inspection
-- Check Network tab for mock API calls
-- Console logs show real-time update events
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
 ## 📝 License
 
 This project is open source and available under the [MIT License](LICENSE).
