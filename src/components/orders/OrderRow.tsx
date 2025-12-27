@@ -39,35 +39,29 @@ export const OrderRow = memo(function OrderRow({
         isSelected && 'bg-amber-500/10 border-l-2 border-l-amber-500'
       )}
     >
-      {/* Order Number & Customer */}
       <div className="w-[200px] flex-shrink-0">
         <p className="text-sm font-mono text-amber-400 truncate">{order.orderNumber}</p>
         <p className="text-sm text-slate-300 truncate">{order.customerName}</p>
       </div>
 
-      {/* Status */}
       <div className="w-[140px] flex-shrink-0">
         <StatusBadge status={order.status} size="sm" />
       </div>
 
-      {/* Timeline Progress */}
       <div className="w-[100px] flex-shrink-0">
         <MiniTimeline status={order.status} />
       </div>
 
-      {/* Priority */}
       <div className="w-[80px] flex-shrink-0">
         <PriorityBadge priority={order.priority} size="sm" />
       </div>
 
-      {/* Amount */}
       <div className="w-[100px] flex-shrink-0 text-right">
         <p className="text-sm font-medium text-slate-200">
           {formatCurrency(order.totalAmount, order.currency)}
         </p>
       </div>
 
-      {/* Region */}
       <div className="w-[100px] flex-shrink-0">
         <div className="flex items-center gap-1 text-sm text-slate-400">
           <MapPin size={14} />
@@ -75,13 +69,11 @@ export const OrderRow = memo(function OrderRow({
         </div>
       </div>
 
-      {/* Date */}
       <div className="flex-1 min-w-[120px]">
         <p className="text-sm text-slate-400">{formatDate(order.createdAt)}</p>
         <p className="text-xs text-slate-500">{formatDate(order.createdAt, 'time')}</p>
       </div>
 
-      {/* Arrow */}
       <div className="w-8 flex-shrink-0 flex justify-end">
         <ChevronRight className="w-5 h-5 text-slate-600" />
       </div>
@@ -127,4 +119,5 @@ export function OrderListHeader() {
     </div>
   );
 }
+
 

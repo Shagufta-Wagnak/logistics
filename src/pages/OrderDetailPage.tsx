@@ -1,13 +1,17 @@
+import { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useOrder } from '@/hooks/useOrders';
+import { useOrder, useOrders } from '@/hooks/useOrders';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 import { Header } from '@/components/layout/Header';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { StatusBadge, PriorityBadge } from '@/components/ui/StatusBadge';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { PageLoader } from '@/components/ui/Spinner';
-import { formatCurrency, formatDate, getNextStatus } from '@/lib/utils';
+import { formatCurrency, formatDate, getNextStatus, ORDER_STATUSES } from '@/lib/utils';
+import type { OrderStatus, OrderPriority } from '@/types';
 import { 
   ArrowLeft, 
   User, 
@@ -19,17 +23,151 @@ import {
   Calendar,
   Clock,
   AlertTriangle,
-  ChevronRight
+  ChevronRight,
+  Edit2,
+  X,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 
 export function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { order, isLoading } = useOrder(orderId || null);
+  const { updateOrder } = useOrders();
   const { hasPermission } = useAuthStore();
+  const { addNotification } = useUIStore();
   
   const canEdit = hasPermission('canEditOrders');
   const nextStatus = order ? getNextStatus(order.status) : null;
+  
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedPriority, setEditedPriority] = useState<OrderPriority | null>(null);
+  const [editedStatus, setEditedStatus] = useState<OrderStatus | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleAdvanceStatus = useCallback(async () => {
+    if (!order || !nextStatus) return;
+    
+    setIsUpdating(true);
+    try {
+      await updateOrder(order.id, { status: nextStatus });
+      addNotification({
+        type: 'success',
+        title: 'Status updated',
+        message: `Order advanced to ${nextStatus.replace('_', ' ')}`,
+      });
+    } catch {
+      addNotification({
+        type: 'error',
+        title: 'Update failed',
+        message: 'Failed to update order status',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [order, nextStatus, updateOrder, addNotification]);
+
+  const handleMarkFailed = useCallback(async () => {
+    if (!order) return;
+    
+    setIsUpdating(true);
+    try {
+      await updateOrder(order.id, { 
+        status: 'failed',
+        failureReason: 'Marked failed by operator'
+      });
+      addNotification({
+        type: 'warning',
+        title: 'Order marked as failed',
+        message: `Order ${order.orderNumber} has been marked as failed`,
+      });
+    } catch {
+      addNotification({
+        type: 'error',
+        title: 'Update failed',
+        message: 'Failed to update order status',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [order, updateOrder, addNotification]);
+
+  const handleRetryDelivery = useCallback(async () => {
+    if (!order) return;
+    
+    setIsUpdating(true);
+    try {
+      await updateOrder(order.id, { 
+        status: 'out_for_delivery',
+        failureReason: undefined
+      });
+      addNotification({
+        type: 'success',
+        title: 'Delivery retried',
+        message: `Order ${order.orderNumber} is back out for delivery`,
+      });
+    } catch {
+      addNotification({
+        type: 'error',
+        title: 'Retry failed',
+        message: 'Failed to retry delivery',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [order, updateOrder, addNotification]);
+
+  const startEditing = useCallback(() => {
+    if (!order) return;
+    setEditedPriority(order.priority);
+    setEditedStatus(order.status);
+    setIsEditing(true);
+  }, [order]);
+
+  const cancelEditing = useCallback(() => {
+    setIsEditing(false);
+    setEditedPriority(null);
+    setEditedStatus(null);
+  }, []);
+
+  const saveEdits = useCallback(async () => {
+    if (!order) return;
+    
+    const updates: { priority?: OrderPriority; status?: OrderStatus } = {};
+    
+    if (editedPriority && editedPriority !== order.priority) {
+      updates.priority = editedPriority;
+    }
+    if (editedStatus && editedStatus !== order.status) {
+      updates.status = editedStatus;
+    }
+    
+    if (Object.keys(updates).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+    
+    setIsUpdating(true);
+    try {
+      await updateOrder(order.id, updates);
+      addNotification({
+        type: 'success',
+        title: 'Order updated',
+        message: 'Order details have been saved',
+      });
+      setIsEditing(false);
+    } catch {
+      addNotification({
+        type: 'error',
+        title: 'Update failed',
+        message: 'Failed to save order changes',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [order, editedPriority, editedStatus, updateOrder, addNotification]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -53,17 +191,49 @@ export function OrderDetailPage() {
         subtitle={`Created ${formatDate(order.createdAt, 'long')}`}
         actions={
           <div className="flex items-center gap-3">
+            {order.status === 'failed' && canEdit && (
+              <Button 
+                variant="outline" 
+                onClick={handleRetryDelivery}
+                disabled={isUpdating}
+              >
+                <RotateCcw size={16} />
+                Retry Delivery
+              </Button>
+            )}
             {order.status === 'failed' && (
               <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-sm">
                 <AlertTriangle size={16} />
                 {order.failureReason}
               </span>
             )}
-            {canEdit && nextStatus && (
-              <Button>
-                Advance to {nextStatus.replace('_', ' ')}
-                <ChevronRight size={16} />
-              </Button>
+            {canEdit && !isEditing && (
+              <>
+                {nextStatus && order.status !== 'delivered' && order.status !== 'failed' && (
+                  <Button onClick={handleAdvanceStatus} disabled={isUpdating}>
+                    Advance to {nextStatus.replace('_', ' ')}
+                    <ChevronRight size={16} />
+                  </Button>
+                )}
+                {order.status !== 'delivered' && order.status !== 'failed' && (
+                  <Button variant="outline" onClick={startEditing}>
+                    <Edit2 size={16} />
+                    Edit
+                  </Button>
+                )}
+              </>
+            )}
+            {canEdit && isEditing && (
+              <>
+                <Button onClick={saveEdits} disabled={isUpdating}>
+                  <Save size={16} />
+                  Save
+                </Button>
+                <Button variant="ghost" onClick={cancelEditing}>
+                  <X size={16} />
+                  Cancel
+                </Button>
+              </>
             )}
             <Button variant="ghost" onClick={() => navigate('/orders')}>
               <ArrowLeft size={16} />
@@ -76,13 +246,58 @@ export function OrderDetailPage() {
       {/* Status & Timeline */}
       <Card variant="bordered" className="mb-6">
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <StatusBadge status={order.status} size="lg" />
-            <PriorityBadge priority={order.priority} size="lg" />
+          <div className="flex items-center gap-4 flex-wrap">
+            {isEditing ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400">Status:</span>
+                  <Select
+                    value={editedStatus || order.status}
+                    onChange={(e) => setEditedStatus(e.target.value as OrderStatus)}
+                    className="w-40"
+                    options={ORDER_STATUSES.map(status => ({
+                      value: status,
+                      label: status.replace('_', ' ')
+                    }))}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400">Priority:</span>
+                  <Select
+                    value={editedPriority || order.priority}
+                    onChange={(e) => setEditedPriority(e.target.value as OrderPriority)}
+                    className="w-32"
+                    options={[
+                      { value: 'low', label: 'Low' },
+                      { value: 'normal', label: 'Normal' },
+                      { value: 'high', label: 'High' },
+                      { value: 'urgent', label: 'Urgent' },
+                    ]}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <StatusBadge status={order.status} size="lg" />
+                <PriorityBadge priority={order.priority} size="lg" />
+              </>
+            )}
             {order.trackingNumber && (
               <span className="text-sm text-slate-400">
                 Tracking: <span className="font-mono text-amber-400">{order.trackingNumber}</span>
               </span>
+            )}
+            {canEdit && order.status !== 'delivered' && order.status !== 'failed' && !isEditing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                onClick={handleMarkFailed}
+                disabled={isUpdating}
+              >
+                <AlertTriangle size={14} />
+                Mark Failed
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -247,4 +462,3 @@ export function OrderDetailPage() {
     </div>
   );
 }
-

@@ -2,12 +2,11 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { Header } from '@/components/layout/Header';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { cn, ROLE_PERMISSIONS } from '@/lib/utils';
+import type { UserRole } from '@/types';
 import { 
   User, 
   Shield, 
-  Bell, 
   Zap, 
   Monitor,
   Eye,
@@ -15,26 +14,34 @@ import {
   Download,
   CheckCircle2,
   XCircle,
-  Moon,
-  RefreshCw
+  Users,
+  AlertTriangle,
 } from 'lucide-react';
 
+const permissionItems = [
+  { key: 'canViewAllOrders', label: 'View All Orders', icon: Eye, description: 'Access orders from all regions' },
+  { key: 'canEditOrders', label: 'Edit Orders', icon: Edit, description: 'Modify order status and details' },
+  { key: 'canViewAllRegions', label: 'View All Regions', icon: Monitor, description: 'See data across all regions' },
+  { key: 'canExport', label: 'Export Data', icon: Download, description: 'Download orders as CSV' },
+  { key: 'canResolveExceptions', label: 'Resolve Exceptions', icon: AlertTriangle, description: 'Handle delivery failures' },
+  { key: 'canManageUsers', label: 'View Permissions', icon: Shield, description: 'View role permissions' },
+] as const;
+
+const roles: { value: UserRole; label: string; color: string; description: string }[] = [
+  { value: 'admin', label: 'Administrator', color: 'amber', description: 'Full system access' },
+  { value: 'ops', label: 'Operations', color: 'blue', description: 'Regional management' },
+  { value: 'viewer', label: 'Viewer', color: 'slate', description: 'Read-only access' },
+];
+
 export function SettingsPage() {
-  const { user } = useAuthStore();
-  const { isRealTimeEnabled, toggleRealTime, ordersViewMode, setOrdersViewMode } = useUIStore();
+  const { user, hasPermission } = useAuthStore();
+  const { isRealTimeEnabled, toggleRealTime } = useUIStore();
+  
+  const canManagePermissions = hasPermission('canManageUsers');
 
   if (!user) return null;
 
   const permissions = ROLE_PERMISSIONS[user.role];
-
-  const permissionItems = [
-    { key: 'canViewAllOrders', label: 'View All Orders', icon: Eye },
-    { key: 'canEditOrders', label: 'Edit Orders', icon: Edit },
-    { key: 'canViewAllRegions', label: 'View All Regions', icon: Monitor },
-    { key: 'canExport', label: 'Export Data', icon: Download },
-    { key: 'canResolveExceptions', label: 'Resolve Exceptions', icon: CheckCircle2 },
-    { key: 'canManageUsers', label: 'Manage Users', icon: Shield },
-  ] as const;
 
   const roleColors = {
     admin: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30' },
@@ -93,54 +100,7 @@ export function SettingsPage() {
               </p>
             </div>
           </div>
-        </Card>
-
-        {/* Permissions Card */}
-        <Card variant="bordered">
-          <CardHeader>
-            <CardTitle>Permissions</CardTitle>
-            <span className="text-sm text-slate-400">Based on your role</span>
-          </CardHeader>
-          <div className="space-y-3">
-            {permissionItems.map(({ key, label, icon: Icon }) => {
-              const hasPermission = permissions[key];
-              return (
-                <div
-                  key={key}
-                  className={cn(
-                    'flex items-center justify-between p-3 rounded-lg',
-                    hasPermission ? 'bg-emerald-500/5' : 'bg-slate-800/30'
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={cn(
-                      'w-5 h-5',
-                      hasPermission ? 'text-emerald-400' : 'text-slate-600'
-                    )} />
-                    <span className={cn(
-                      'text-sm',
-                      hasPermission ? 'text-slate-200' : 'text-slate-500'
-                    )}>
-                      {label}
-                    </span>
-                  </div>
-                  {hasPermission ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-slate-600" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Preferences Card */}
-        <Card variant="bordered">
-          <CardHeader>
-            <CardTitle>Preferences</CardTitle>
-          </CardHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 mt-2">
             {/* Real-time Toggle */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30">
               <div className="flex items-center gap-3">
@@ -170,88 +130,167 @@ export function SettingsPage() {
                 />
               </button>
             </div>
-
-            {/* View Mode */}
-            <div className="p-3 rounded-lg bg-slate-800/30">
-              <div className="flex items-center gap-3 mb-3">
-                <Monitor className="w-5 h-5 text-slate-400" />
-                <div>
-                  <p className="text-sm text-slate-200">Orders View Mode</p>
-                  <p className="text-xs text-slate-500">Choose your preferred layout</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {(['list', 'grid'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setOrdersViewMode(mode)}
-                    className={cn(
-                      'flex-1 py-2 rounded-lg text-sm font-medium transition-all',
-                      ordersViewMode === mode
-                        ? 'bg-amber-500 text-slate-900'
-                        : 'bg-slate-700 text-slate-400 hover:text-slate-200'
-                    )}
-                  >
-                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Theme (placeholder) */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30 opacity-60">
-              <div className="flex items-center gap-3">
-                <Moon className="w-5 h-5 text-slate-400" />
-                <div>
-                  <p className="text-sm text-slate-200">Dark Mode</p>
-                  <p className="text-xs text-slate-500">Always enabled</p>
-                </div>
-              </div>
-              <div className="w-12 h-6 rounded-full bg-emerald-500 relative">
-                <div className="absolute top-1 left-7 w-4 h-4 rounded-full bg-white" />
-              </div>
-            </div>
           </div>
         </Card>
 
-        {/* System Info Card */}
+        {/* Your Permissions Card */}
         <Card variant="bordered">
           <CardHeader>
-            <CardTitle>System Info</CardTitle>
+            <CardTitle>Your Permissions</CardTitle>
+            <span className="text-sm text-slate-400">Based on your role</span>
           </CardHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 rounded-lg bg-slate-800/30">
-                <p className="text-xs text-slate-500">Version</p>
-                <p className="text-sm font-mono text-slate-200">1.0.0</p>
-              </div>
-              <div className="p-3 rounded-lg bg-slate-800/30">
-                <p className="text-xs text-slate-500">Environment</p>
-                <p className="text-sm font-mono text-amber-400">Demo</p>
-              </div>
-            </div>
-            
-            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <div className="flex items-start gap-3">
-                <RefreshCw className="w-5 h-5 text-amber-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-amber-400">Demo Mode Active</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    This is a demonstration application with simulated data. 
-                    All orders and updates are mock data for testing purposes.
-                  </p>
+          <div className="space-y-3">
+            {permissionItems.map(({ key, label, icon: Icon }) => {
+              const hasPermissionForKey = permissions[key];
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    'flex items-center justify-between p-3 rounded-lg',
+                    hasPermissionForKey ? 'bg-emerald-500/5' : 'bg-slate-800/30'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={cn(
+                      'w-5 h-5',
+                      hasPermissionForKey ? 'text-emerald-400' : 'text-slate-600'
+                    )} />
+                    <span className={cn(
+                      'text-sm',
+                      hasPermissionForKey ? 'text-slate-200' : 'text-slate-500'
+                    )}>
+                      {label}
+                    </span>
+                  </div>
+                  {hasPermissionForKey ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-slate-600" />
+                  )}
                 </div>
-              </div>
-            </div>
-
-            <div className="text-center text-xs text-slate-500 pt-4 border-t border-slate-800">
-              <p>Built with React + TypeScript + Tailwind CSS</p>
-              <p className="mt-1">Designed for high-performance logistics tracking</p>
-            </div>
+              );
+            })}
           </div>
         </Card>
+
+        {/* Role Permissions Matrix - Only for Admins */}
+        {canManagePermissions && (
+          <Card variant="bordered" className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-400" />
+                <CardTitle>Role Permissions Matrix</CardTitle>
+              </div>
+              <span className="text-sm text-slate-400">Compare permissions across all roles</span>
+            </CardHeader>
+
+            {/* Permissions Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-700/50">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Permission
+                    </th>
+                    {roles.map((role) => (
+                      <th key={role.value} className="text-center py-3 px-4">
+                        <div className={cn(
+                          'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium',
+                          `bg-${role.color}-500/10 text-${role.color}-400 border border-${role.color}-500/30`
+                        )}>
+                          <Shield size={12} />
+                          {role.label}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">{role.description}</p>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {permissionItems.map(({ key, label, icon: Icon, description }) => (
+                    <tr key={key} className="border-b border-slate-800/30 hover:bg-slate-800/20">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-4 h-4 text-slate-400" />
+                          <div>
+                            <p className="text-sm text-slate-200">{label}</p>
+                            <p className="text-xs text-slate-500">{description}</p>
+                          </div>
+                        </div>
+                      </td>
+                      {roles.map((role) => {
+                        const rolePerms = ROLE_PERMISSIONS[role.value];
+                        const hasIt = rolePerms[key];
+                        return (
+                          <td key={role.value} className="text-center py-4 px-4">
+                            {hasIt ? (
+                              <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-slate-600 mx-auto" />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Role Summary */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {roles.map((role) => {
+                const rolePerms = ROLE_PERMISSIONS[role.value];
+                const permCount = Object.values(rolePerms).filter(Boolean).length;
+                const totalPerms = Object.keys(rolePerms).length;
+                
+                return (
+                  <div
+                    key={role.value}
+                    className={cn(
+                      'p-4 rounded-lg border',
+                      role.value === user.role ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-700/50 bg-slate-800/30'
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={cn(
+                        'text-sm font-medium',
+                        role.value === 'admin' && 'text-amber-400',
+                        role.value === 'ops' && 'text-blue-400',
+                        role.value === 'viewer' && 'text-slate-400'
+                      )}>
+                        {role.label}
+                      </span>
+                      {role.value === user.role && (
+                        <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mb-3">{role.description}</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div 
+                          className={cn(
+                            'h-full rounded-full',
+                            role.value === 'admin' && 'bg-amber-500',
+                            role.value === 'ops' && 'bg-blue-500',
+                            role.value === 'viewer' && 'bg-slate-500'
+                          )}
+                          style={{ width: `${(permCount / totalPerms) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-slate-400">
+                        {permCount}/{totalPerms}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
 }
-

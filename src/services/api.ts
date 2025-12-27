@@ -1,5 +1,5 @@
 import type { Order, DeliveryAgent, DashboardStats, OrderException } from '@/types';
-import { generateOrders, generateDeliveryAgents, generateException } from '@/mocks/generators';
+import { generateOrders, generateDeliveryAgents, generateException, resetRandomSeed } from '@/mocks/generators';
 
 // Simulated latency range (ms)
 const MIN_LATENCY = 100;
@@ -25,13 +25,21 @@ let ordersCache: Order[] | null = null;
 let agentsCache: DeliveryAgent[] | null = null;
 
 function getOrdersStore(): Order[] {
-  // Generate 10,000 orders for performance testing
-  ordersCache ??= generateOrders(10000);
+  if (!ordersCache) {
+    // Reset seed for consistent data across reloads
+    resetRandomSeed(12345);
+    // Generate 10,000 orders for performance testing
+    ordersCache = generateOrders(10000);
+  }
   return ordersCache;
 }
 
 function getAgentsStore(): DeliveryAgent[] {
-  agentsCache ??= generateDeliveryAgents(50);
+  if (!agentsCache) {
+    // Reset seed for consistent agent data
+    resetRandomSeed(54321);
+    agentsCache = generateDeliveryAgents(50);
+  }
   return agentsCache;
 }
 

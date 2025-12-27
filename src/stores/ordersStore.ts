@@ -51,6 +51,9 @@ interface OrdersState {
     byStatus: Record<OrderStatus, number>;
     byPriority: Record<string, number>;
   };
+  
+  // Reset
+  reset: () => void;
 }
 
 const defaultFilters: OrderFilters = {};
@@ -211,6 +214,19 @@ export const useOrdersStore = create<OrdersState>()(
         byPriority,
       };
     },
+
+    reset: () => {
+      set({
+        orders: new Map(),
+        filteredOrderIds: [],
+        selectedOrderId: null,
+        filters: defaultFilters,
+        sortConfig: defaultSort,
+        isLoading: false,
+        isInitialized: false,
+        pendingUpdates: [],
+      });
+    },
   }))
 );
 
@@ -323,4 +339,5 @@ function getPriorityOrder(priority: string): number {
   };
   return order[priority] ?? 1;
 }
+
 

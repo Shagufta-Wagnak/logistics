@@ -30,9 +30,9 @@ interface UIState {
   lastUpdateTime: string | null;
   setLastUpdateTime: (time: string) => void;
   
-  // View preferences
-  ordersViewMode: 'list' | 'grid';
-  setOrdersViewMode: (mode: 'list' | 'grid') => void;
+  // // View preferences
+  // ordersViewMode: 'list' | 'grid';
+  // setOrdersViewMode: (mode: 'list' | 'grid') => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -77,7 +77,8 @@ export const useUIStore = create<UIState>((set) => ({
   setLastUpdateTime: (time) => set({ lastUpdateTime: time }),
   
   // View preferences
-  ordersViewMode: 'list',
-  setOrdersViewMode: (mode) => set({ ordersViewMode: mode }),
+  // ordersViewMode: 'list',
+  // setOrdersViewMode: (mode) => set({ ordersViewMode: mode }),
 }));
+
 

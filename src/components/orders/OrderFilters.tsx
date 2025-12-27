@@ -1,10 +1,9 @@
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useMemo } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { cn, STATUS_CONFIG, PRIORITY_CONFIG, REGIONS } from '@/lib/utils';
+import { cn, STATUS_CONFIG, PRIORITY_CONFIG, REGIONS, debounce } from '@/lib/utils';
 import type { OrderFilters as FilterType, OrderStatus, OrderPriority } from '@/types';
 import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { debounce } from '@/lib/utils';
 
 interface OrderFiltersProps {
   filters: FilterType;
@@ -23,9 +22,9 @@ export const OrderFilters = memo(function OrderFilters({
 }: OrderFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
-  const debouncedSearch = useCallback(
-    debounce((value: string) => {
-      onFilterChange({ search: value || undefined });
+  const debouncedSearch = useMemo(
+    () => debounce((value: string) => {
+      onFilterChange({ search: value || null });
     }, 300),
     [onFilterChange]
   );
@@ -71,7 +70,7 @@ export const OrderFilters = memo(function OrderFilters({
         <div className="flex-1 max-w-md">
           <Input
             isSearch
-            placeholder="Search orders, customers, tracking..."
+            placeholder="Search orders, customers"
             defaultValue={filters.search || ''}
             onChange={handleSearchChange}
           />
@@ -190,4 +189,5 @@ export const OrderFilters = memo(function OrderFilters({
     </div>
   );
 });
+
 

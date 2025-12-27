@@ -22,8 +22,8 @@ export const VirtualizedOrderList = memo(function VirtualizedOrderList({
   const rowVirtualizer = useVirtualizer({
     count: orders.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 64, // Estimated row height
-    overscan: 20, // Render extra rows for smoother scrolling
+    estimateSize: () => 64, 
+    overscan: 20, 
   });
 
   const handleSelectOrder = useCallback((orderId: string) => {
@@ -79,16 +79,9 @@ export const VirtualizedOrderList = memo(function VirtualizedOrderList({
         </div>
       </div>
       
-      {/* Performance indicator */}
-      <div className="px-4 py-2 bg-slate-800/30 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-500">
-        <span>
-          Rendering {rowVirtualizer.getVirtualItems().length} of {orders.length} rows
-        </span>
-        <span className="text-emerald-400">
-          ⚡ Virtualized for performance
-        </span>
-      </div>
+    
     </div>
   );
 });
+
 

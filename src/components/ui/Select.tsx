@@ -28,7 +28,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               {placeholder}
             </option>
           )}
-          {options.map((opt) => (
+          {options?.map((opt) => (
             <option key={opt.value} value={opt.value} className="bg-slate-800">
               {opt.label}
             </option>
@@ -41,4 +41,5 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 );
 
 Select.displayName = 'Select';
+
 

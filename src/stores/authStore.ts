@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { User, UserRole } from '@/types';
 import { generateMockUser } from '@/mocks/generators';
 import { ROLE_PERMISSIONS } from '@/lib/utils';
+import { useOrdersStore } from './ordersStore';
 
 interface AuthState {
   user: User | null;
@@ -35,6 +36,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        // Reset orders store to clear cached data
+        useOrdersStore.getState().reset();
+        
         set({
           user: null,
           isAuthenticated: false,
@@ -57,4 +61,5 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
 

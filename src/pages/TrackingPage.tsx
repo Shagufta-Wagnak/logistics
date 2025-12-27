@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useCallback, memo, useMemo } from 'react';
+import Map, { Marker, Popup, NavigationControl } from 'react-map-gl/maplibre';
 import { useAgents } from '@/hooks/useAgents';
 import { useOrders } from '@/hooks/useOrders';
 import { Header } from '@/components/layout/Header';
@@ -6,8 +7,8 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PageLoader } from '@/components/ui/Spinner';
-import { cn, formatDate } from '@/lib/utils';
-import type { DeliveryAgent, Order } from '@/types';
+import { cn } from '@/lib/utils';
+import type { DeliveryAgent } from '@/types';
 import { 
   MapPin, 
   Truck, 
@@ -15,7 +16,6 @@ import {
   Phone, 
   Star, 
   Package,
-  Navigation,
   Zap,
   List,
   Map as MapIcon
@@ -93,8 +93,62 @@ const AgentCard = memo(function AgentCard({
   );
 });
 
-// Map Placeholder Component
-function MapPlaceholder({ 
+// Agent Marker Component
+const AgentMarker = memo(function AgentMarker({
+  agent,
+  isSelected,
+  onClick
+}: {
+  agent: DeliveryAgent;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const statusColors = {
+    available: 'bg-emerald-500 border-emerald-400',
+    on_delivery: 'bg-amber-500 border-amber-400',
+    offline: 'bg-slate-500 border-slate-400',
+    break: 'bg-blue-500 border-blue-400',
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'relative transform transition-all duration-200 cursor-pointer',
+        isSelected && 'scale-125 z-50'
+      )}
+    >
+      {/* Pulse animation for selected */}
+      {isSelected && (
+        <div className="absolute inset-0 -m-2 rounded-full bg-amber-500/30 animate-ping" />
+      )}
+      
+      {/* Marker */}
+      <div className={cn(
+        'w-10 h-10 rounded-full flex items-center justify-center border-2 shadow-lg transition-all',
+        isSelected 
+          ? 'bg-amber-500 border-amber-300 text-slate-900' 
+          : statusColors[agent.status] + ' text-white'
+      )}>
+        <Truck size={18} />
+      </div>
+      
+      {/* Name label */}
+      <div className={cn(
+        'absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap',
+        'px-2 py-0.5 rounded text-xs font-medium shadow-lg',
+        isSelected
+          ? 'bg-amber-500 text-slate-900'
+          : 'bg-slate-800 text-slate-200'
+      )}>
+        {agent.name.split(' ')[0]}
+      </div>
+    </button>
+  );
+});
+
+// Interactive Map Component
+function InteractiveMap({ 
   agents, 
   selectedAgent,
   onSelectAgent 
@@ -103,93 +157,110 @@ function MapPlaceholder({
   selectedAgent: DeliveryAgent | null;
   onSelectAgent: (id: string) => void;
 }) {
-  const activeAgents = agents.filter(a => a.status === 'on_delivery');
+  const activeAgents = agents.filter(a => a.status !== 'offline');
+  const [popupAgent, setPopupAgent] = useState<DeliveryAgent | null>(null);
   
+  // Calculate map center based on agents
+  const mapCenter = useMemo(() => {
+    if (selectedAgent) {
+      return {
+        longitude: selectedAgent.currentLocation.lng,
+        latitude: selectedAgent.currentLocation.lat,
+        zoom: 12
+      };
+    }
+    if (activeAgents.length === 0) {
+      return { longitude: -98.5795, latitude: 39.8283, zoom: 4 }; // US center
+    }
+    const avgLng = activeAgents.reduce((sum, a) => sum + a.currentLocation.lng, 0) / activeAgents.length;
+    const avgLat = activeAgents.reduce((sum, a) => sum + a.currentLocation.lat, 0) / activeAgents.length;
+    return { longitude: avgLng, latitude: avgLat, zoom: 5 };
+  }, [activeAgents, selectedAgent]);
+
+  const handleMarkerClick = useCallback((agent: DeliveryAgent) => {
+    onSelectAgent(agent.id);
+    setPopupAgent(agent);
+  }, [onSelectAgent]);
+
   return (
-    <div className="relative w-full h-full bg-[#1a2332] rounded-xl overflow-hidden">
-      {/* Grid Background */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(30, 41, 59, 0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30, 41, 59, 0.5) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px',
-        }}
-      />
-      
-      {/* Simulated Map Markers */}
-      <div className="absolute inset-0">
-        {activeAgents.map((agent, index) => {
-          // Distribute agents across the map area
-          const x = 10 + (index % 5) * 18 + Math.random() * 10;
-          const y = 10 + Math.floor(index / 5) * 25 + Math.random() * 10;
-          const isSelected = selectedAgent?.id === agent.id;
-          
-          return (
-            <button
-              key={agent.id}
-              onClick={() => onSelectAgent(agent.id)}
-              className={cn(
-                'absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300',
-                isSelected && 'z-10 scale-125'
-              )}
-              style={{ left: `${x}%`, top: `${y}%` }}
-            >
-              <div className={cn(
-                'relative flex items-center justify-center',
-                isSelected && 'animate-pulse'
-              )}>
-                {/* Pulse ring for selected */}
-                {isSelected && (
-                  <div className="absolute w-12 h-12 rounded-full bg-amber-500/30 animate-ping" />
-                )}
-                
-                {/* Marker */}
-                <div className={cn(
-                  'w-10 h-10 rounded-full flex items-center justify-center border-2 shadow-lg',
-                  isSelected
-                    ? 'bg-amber-500 border-amber-400 text-slate-900'
-                    : 'bg-slate-700 border-slate-600 text-slate-300'
-                )}>
-                  <Truck size={18} />
-                </div>
-                
-                {/* Label */}
-                <div className={cn(
-                  'absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap',
-                  'px-2 py-1 rounded text-xs',
-                  isSelected
-                    ? 'bg-amber-500 text-slate-900 font-medium'
-                    : 'bg-slate-800/90 text-slate-300'
-                )}>
-                  {agent.name.split(' ')[0]}
-                </div>
+    <div className="relative w-full h-full rounded-xl overflow-hidden">
+      <Map
+        initialViewState={mapCenter}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+      >
+        <NavigationControl position="top-right" />
+        
+        {/* Agent Markers */}
+        {activeAgents.map((agent) => (
+          <Marker
+            key={agent.id}
+            longitude={agent.currentLocation.lng}
+            latitude={agent.currentLocation.lat}
+            anchor="center"
+          >
+            <AgentMarker
+              agent={agent}
+              isSelected={selectedAgent?.id === agent.id}
+              onClick={() => handleMarkerClick(agent)}
+            />
+          </Marker>
+        ))}
+        
+        {/* Popup for selected agent */}
+        {popupAgent && (
+          <Popup
+            longitude={popupAgent.currentLocation.lng}
+            latitude={popupAgent.currentLocation.lat}
+            anchor="top"
+            onClose={() => setPopupAgent(null)}
+            closeButton={true}
+            closeOnClick={false}
+            className="agent-popup"
+          >
+            <div className="p-2 min-w-[180px]">
+              <p className="font-semibold text-slate-900">{popupAgent.name}</p>
+              <p className="text-xs text-slate-600 capitalize">
+                {popupAgent.status.replace('_', ' ')} • {popupAgent.vehicleType}
+              </p>
+              <div className="flex items-center gap-2 mt-2 text-xs text-slate-600">
+                <MapPin size={12} />
+                <span>{popupAgent.region}</span>
               </div>
-            </button>
-          );
-        })}
-      </div>
+              <div className="flex items-center gap-2 mt-1 text-xs">
+                <Star size={12} className="text-amber-500" fill="currentColor" />
+                <span className="text-slate-700">{popupAgent.rating} rating</span>
+              </div>
+            </div>
+          </Popup>
+        )}
+      </Map>
       
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50">
-        <p className="text-xs font-medium text-slate-400 mb-2">Active Agents</p>
-        <div className="flex items-center gap-4">
+      {/* Map Legend */}
+      <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50">
+        <p className="text-xs font-medium text-slate-400 mb-2">Delivery Agents</p>
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-amber-500" />
-            <span className="text-xs text-slate-300">{activeAgents.length} on delivery</span>
+            <span className="text-xs text-slate-300">On Delivery</span>
           </div>
           <div className="flex items-center gap-2">
-            <Navigation className="w-3 h-3 text-emerald-400" />
-            <span className="text-xs text-slate-300">Live tracking</span>
+            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+            <span className="text-xs text-slate-300">Available</span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <span className="text-xs text-slate-300">On Break</span>
+          </div>
+        </div>
+        <div className="mt-2 pt-2 border-t border-slate-700/50 text-xs text-slate-400">
+          {activeAgents.length} agents active
         </div>
       </div>
       
-      {/* Center message */}
+      {/* No agents message */}
       {activeAgents.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50">
           <div className="text-center">
             <MapIcon className="w-12 h-12 text-slate-600 mx-auto mb-3" />
             <p className="text-slate-400">No active deliveries</p>
@@ -296,7 +367,7 @@ export function TrackingPage() {
             viewMode === 'split' && 'col-span-2',
             viewMode === 'map' && 'col-span-1'
           )}>
-            <MapPlaceholder 
+            <InteractiveMap 
               agents={agents} 
               selectedAgent={selectedAgent}
               onSelectAgent={handleSelectAgent}
@@ -335,6 +406,12 @@ export function TrackingPage() {
                 {selectedAgent.region}
               </span>
             </div>
+            <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
+              <span>Coordinates:</span>
+              <code className="bg-slate-800 px-1.5 py-0.5 rounded text-amber-400">
+                {selectedAgent.currentLocation.lat.toFixed(4)}, {selectedAgent.currentLocation.lng.toFixed(4)}
+              </code>
+            </div>
           </div>
           
           {agentOrders.length > 0 && (
@@ -363,4 +440,3 @@ export function TrackingPage() {
     </div>
   );
 }
-

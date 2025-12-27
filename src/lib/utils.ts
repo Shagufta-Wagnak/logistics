@@ -57,15 +57,22 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
 };
 
 export const REGIONS = [
-  'North',
-  'South',
-  'East',
-  'West',
-  'Central',
   'Northeast',
   'Southeast',
-  'Northwest',
+  'Central',
+  'South',
   'Southwest',
+  'West',
+  'Northwest',
+];
+
+export const ORDER_STATUSES: OrderStatus[] = [
+  'created',
+  'packed',
+  'shipped',
+  'out_for_delivery',
+  'delivered',
+  'failed',
 ];
 
 export function formatCurrency(amount: number, currency: string = 'USD'): string {
@@ -128,7 +135,7 @@ export function getNextStatus(current: OrderStatus): OrderStatus | null {
   return flow[currentIndex + 1];
 }
 
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: never[]) => void>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
@@ -139,7 +146,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   };
 }
 
-export function throttle<T extends (...args: unknown[]) => unknown>(
+export function throttle<T extends (...args: never[]) => void>(
   fn: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -152,4 +159,5 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
     }
   };
 }
+
 

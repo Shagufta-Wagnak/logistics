@@ -24,36 +24,49 @@ export function useOrders() {
   const { isRealTimeEnabled, setLastUpdateTime, addNotification } = useUIStore();
   const { user } = useAuthStore();
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const lastUserRef = useRef<string | null>(null);
+
+  // Helper function to filter orders by user region
+  const filterOrdersByUser = useCallback((orders: Order[]): Order[] => {
+    if (user?.role === 'ops' && user.region) {
+      return orders.filter((o) => o.region === user.region);
+    }
+    return orders;
+  }, [user]);
 
   // Initial data fetch
-  const { isLoading, error, refetch } = useQuery({
+  const { data: rawOrders, isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
     queryFn: api.fetchAllOrders,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
   });
 
-  // Set orders when query succeeds
+  // Process orders when data changes or user changes
   useEffect(() => {
-    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      if (
-        event.type === 'updated' &&
-        event.query.queryKey[0] === 'orders' &&
-        event.query.state.status === 'success'
-      ) {
-        let orders = event.query.state.data as Order[];
-        
-        // Apply region filter for ops users
-        if (user?.role === 'ops' && user.region) {
-          orders = orders.filter((o) => o.region === user.region);
-        }
-        
-        setOrders(orders);
-      }
-    });
+    if (!rawOrders) return;
+    
+    const filteredOrders = filterOrdersByUser(rawOrders);
+    setOrders(filteredOrders);
+  }, [rawOrders, filterOrdersByUser, setOrders]);
 
-    return () => unsubscribe();
-  }, [queryClient, setOrders, user]);
+  // Force refetch when user changes (new login with different role/region)
+  useEffect(() => {
+    const userKey = user ? `${user.id}-${user.role}-${user.region || ''}` : null;
+    
+    // Skip on initial mount or if user hasn't changed
+    if (lastUserRef.current === null) {
+      lastUserRef.current = userKey;
+      return;
+    }
+    
+    if (lastUserRef.current !== userKey) {
+      lastUserRef.current = userKey;
+      
+      // Invalidate and refetch orders for the new user
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    }
+  }, [user, queryClient]);
 
   // Real-time updates subscription
   useEffect(() => {
@@ -167,4 +180,3 @@ export function useOrder(orderId: string | null) {
     isLoading: !storeOrder && isLoading,
   };
 }
-

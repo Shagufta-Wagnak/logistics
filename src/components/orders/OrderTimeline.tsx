@@ -8,7 +8,6 @@ import {
   MapPin, 
   CheckCircle2, 
   XCircle,
-  Clock
 } from 'lucide-react';
 
 interface OrderTimelineProps {
@@ -59,7 +58,7 @@ export const OrderTimeline = memo(function OrderTimeline({
           }}
         />
         
-        {statusFlow.map((status, index) => {
+        {statusFlow.map((status) => {
           const isCompleted = completedStatuses.includes(status);
           const isCurrent = status === currentStatus;
           const timelineEntry = timeline.find(t => t.status === status);
@@ -207,4 +206,5 @@ export const MiniTimeline = memo(function MiniTimeline({
     </div>
   );
 });
+
 

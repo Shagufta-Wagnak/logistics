@@ -121,7 +121,7 @@ export interface OrderFilters {
     start: string;
     end: string;
   };
-  search?: string;
+  search?: string | null;
   assignedDriver?: string;
 }
 
@@ -232,4 +232,5 @@ export interface OrderException {
   resolvedBy?: string;
   resolution?: string;
 }
+
 
